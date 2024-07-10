@@ -24,4 +24,4 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
       - uses: actions/setup-node@v4
       - run: npm install
-      - run: npm run cdk deploy
+      - run: npm run cdk deploy --require-approval never
