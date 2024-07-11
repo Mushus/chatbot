@@ -4,9 +4,9 @@ import { MastodonToken } from '../types';
 
 export async function authorizeStart(
   redirectUri: string,
-): Promise<{ url: URL } | { tokenAlreadyExists: true }> {
+): Promise<{ url: URL } | { error: 'tokenAlreadyExists' }> {
   const token = await findAppToken();
-  if (token) return { tokenAlreadyExists: true };
+  if (token) return { error: 'tokenAlreadyExists' };
 
   let app = await findApp();
   if (!app) {

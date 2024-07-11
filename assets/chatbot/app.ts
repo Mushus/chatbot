@@ -30,7 +30,7 @@ app.get('/auth', async (ctx) => {
   const redirectUri = getRedirectUri(ctx);
 
   const authorization = await authorizeStart(redirectUri);
-  if ('tokenAlreadyExists' in authorization) return ctx.redirect('/');
+  if ('error' in authorization) return ctx.redirect('/');
 
   return ctx.redirect(authorization.url.toString());
 });
