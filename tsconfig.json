@@ -15,11 +15,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": false,
+    "noFallthroughCasesInSwitch": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "experimentalDecorators": true,
-    "strictPropertyInitialization": false,
     "typeRoots": [
       "./node_modules/@types"
     ],
