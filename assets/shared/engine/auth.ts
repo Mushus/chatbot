@@ -23,16 +23,16 @@ export async function createToken(
   redirectUri: string,
 ): Promise<
   | { token: MastodonToken }
-  | { tokenAlreadyExists: true }
-  | { appNotFound: true }
+  | { error: 'tokenAlreadyExists' }
+  | { error: 'appNotFound' }
 > {
   {
     const token = await findAppToken();
-    if (token) return { tokenAlreadyExists: true };
+    if (token) return { error: 'tokenAlreadyExists' };
   }
 
   const app = await findApp();
-  if (!app) return { appNotFound: true };
+  if (!app) return { error: 'appNotFound' };
 
   const token = await createAppToken(app, code, redirectUri);
   await saveApiToken(token);

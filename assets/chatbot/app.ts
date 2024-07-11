@@ -20,8 +20,7 @@ app.get(
     const redirectUri = getRedirectUri(ctx);
 
     const res = await createToken(code, redirectUri);
-    if ('tokenAlreadyExists' in res) return ctx.redirect('/');
-    if ('appNotFound' in res) return ctx.redirect('/');
+    if ('error' in res) return ctx.redirect('/');
 
     return ctx.text('success');
   },
@@ -34,10 +33,6 @@ app.get('/auth', async (ctx) => {
   if ('tokenAlreadyExists' in authorization) return ctx.redirect('/');
 
   return ctx.redirect(authorization.url.toString());
-});
-
-app.post('/api/vertexai', async (ctx) => {
-  return ctx.json({ status: 'ok' });
 });
 
 function getRedirectUri(ctx: Context): string {
