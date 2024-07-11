@@ -1,7 +1,11 @@
 import { vValidator } from '@hono/valibot-validator';
 import { Context, Hono } from 'hono';
 import * as v from 'valibot';
-import { authorizeStart, createToken } from '../shared/engine/auth';
+import {
+  AppNotFoundError,
+  authorizeStart,
+  createToken,
+} from '../shared/engine/auth';
 import { AppName } from '../shared/env/value';
 
 const HeaderHost = 'Host';
@@ -19,8 +23,14 @@ app.get(
     const { code } = ctx.req.valid('query');
     const redirectUri = getRedirectUri(ctx);
 
-    const res = await createToken(code, redirectUri);
-    if ('error' in res) return ctx.redirect('/');
+    try {
+      await createToken(code, redirectUri);
+    } catch (e: unknown) {
+      if (e instanceof AppNotFoundError) {
+        return ctx.redirect('/');
+      }
+      throw e;
+    }
 
     return ctx.text('success');
   },

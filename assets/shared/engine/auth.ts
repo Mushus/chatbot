@@ -18,24 +18,27 @@ export async function authorizeStart(
   return { url: authorizeUrl };
 }
 
+/**
+ *
+ * @param code
+ * @param redirectUri
+ * @returns
+ * @throws AppNotFoundError
+ */
 export async function createToken(
   code: string,
   redirectUri: string,
-): Promise<
-  | { token: MastodonToken }
-  | { error: 'tokenAlreadyExists' }
-  | { error: 'appNotFound' }
-> {
-  {
-    const token = await findAppToken();
-    if (token) return { error: 'tokenAlreadyExists' };
-  }
+): Promise<MastodonToken> {
+  const tokenInStorage = await findAppToken();
+  if (tokenInStorage) return tokenInStorage;
 
   const app = await findApp();
-  if (!app) return { error: 'appNotFound' };
+  if (!app) throw new AppNotFoundError('App not found');
 
-  const token = await createAppToken(app, code, redirectUri);
-  await saveApiToken(token);
+  const newToken = await createAppToken(app, code, redirectUri);
+  await saveApiToken(newToken);
 
-  return { token };
+  return newToken;
 }
+
+export class AppNotFoundError extends Error {}
