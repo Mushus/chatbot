@@ -257,7 +257,7 @@ export async function generateReplyApproach(message: string) {
   });
   try {
     return v.parse(ReplyApproach.schema, res);
-  } catch (e) {
+  } catch (_e) {
     return { error: 'parse_failed' };
   }
 }
