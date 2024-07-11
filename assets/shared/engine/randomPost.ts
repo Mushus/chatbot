@@ -17,10 +17,10 @@ import {
 } from '../dynamodb/tweetTopic';
 import { queryDailySlogan, saveDailySlogan } from '../dynamodb/dailySlogan';
 
-const TweetFequency = 1 / 10;
+const TweetFrequency = 1 / 10;
 
 export default async function randomPost(token: MastodonToken) {
-  if (Math.random() >= TweetFequency) return;
+  if (Math.random() >= TweetFrequency) return;
 
   const now = dayjs();
   const slogan = await getSlogan(now);
@@ -71,13 +71,13 @@ export async function getTodo(now: dayjs.Dayjs, slogan: string) {
   const todo = await queryHourlyTodo(year, month, day, hour);
   if (todo) return todo;
 
-  const todos = await generateHourlyTodo(slogan);
+  const todoTable = await generateHourlyTodo(slogan);
 
   const hourKey = hour.toString();
-  if (!todos[hourKey]) throw new Error('Invalid schedule');
+  if (!todoTable[hourKey]) throw new Error('Invalid schedule');
 
   const expireAt = dayjs().add(1, 'day').unix();
-  await saveHourlyTodo(year, month, day, todos, expireAt);
+  await saveHourlyTodo(year, month, day, todoTable, expireAt);
 
-  return todos[hourKey];
+  return todoTable[hourKey];
 }

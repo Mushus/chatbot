@@ -13,7 +13,7 @@ const BaseUrl = `https://${MastodonDomain}`;
 
 const fedClient = ofetch.create({
   baseURL: BaseUrl,
-  async onResponseError({ request, response }) {
+  onResponseError({ request, response }) {
     console.error(
       '[fetch response error]',
       request,
@@ -31,7 +31,7 @@ export async function createApp(redirectUri: string) {
   const form = new FormData();
   form.append('client_name', AppName);
   form.append('redirect_uris', redirectUri);
-  form.append('scppe', AppScope);
+  form.append('scope', AppScope);
   const app = await fedClient<MastodonApp>('/api/v1/apps', {
     method: 'POST',
     body: form,
@@ -74,7 +74,7 @@ export async function updateStatus(
   token: MastodonToken,
   param: { status: string; in_reply_to_id?: string },
 ) {
-  const res = await fedClient('/api/v1/statuses', {
+  const res = await fedClient<MastodonStatus>('/api/v1/statuses', {
     method: 'POST',
     headers: authHeader(token.access_token),
     body: { ...param, visibility: 'public' },
@@ -93,22 +93,20 @@ export async function getAllNotifications(
     since_id?: string;
   },
 ) {
-  const res = await fedClient('/api/v1/notifications', {
+  const res = await fedClient<MastodonNotification[]>('/api/v1/notifications', {
     query: param,
     headers: authHeader(token.access_token),
   });
 
-  return res as MastodonNotification[];
+  return res;
 }
 
 export async function follow(token: MastodonToken, accountId: string) {
   const id = encodeURIComponent(accountId);
-  const res = await fedClient(`/api/v1/accounts/${id}/follow`, {
+  await fedClient(`/api/v1/accounts/${id}/follow`, {
     method: 'POST',
     headers: authHeader(token.access_token),
   });
-
-  return res;
 }
 
 export async function viewStatus(token: MastodonToken, id: string) {
@@ -150,10 +148,8 @@ export async function viewHomeTimeline(
 }
 
 export async function favouriteStatus(token: MastodonToken, id: string) {
-  const res = await fedClient(`/api/v1/statuses/${id}/favourite`, {
+  await fedClient(`/api/v1/statuses/${id}/favourite`, {
     method: 'POST',
     headers: authHeader(token.access_token),
   });
-
-  return res;
 }

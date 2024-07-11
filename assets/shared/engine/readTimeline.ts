@@ -11,7 +11,7 @@ import {
   viewStatus,
 } from '../mastodon';
 import { MastodonStatus, MastodonToken } from '../types';
-import { evaluteTimeline, generateReplyApproach } from './generator';
+import { evaluateTimeline, generateReplyApproach } from './generator';
 
 export default async function readTimeline(token: MastodonToken) {
   const credentials = await verifyCredentials(token);
@@ -28,19 +28,18 @@ export default async function readTimeline(token: MastodonToken) {
       text: status.text ?? striptags(status.content),
     }))
     .filter((status) => status.account.id !== credentials.id)
-    .filter((status) => status.in_reply_to_id === null)
+    .filter((status) => status.in_reply_to_id === undefined)
     .filter((status) => !status.text.startsWith('@'));
-  const evaluation = await evaluteTimeline(targetStatuses);
+  const evaluation = await evaluateTimeline(targetStatuses);
   if ('error' in evaluation) {
-    await saveAppTimelineSinceId(sinceId);
     return;
   }
 
   let sinceIdCursor = sinceId;
   // 下から読むとエラーがあったときに最小限で済む
-  const processableEvalutionStatus = [...evaluation].reverse();
+  const processableEvaluationStatus = [...evaluation].reverse();
   try {
-    for (const { status, fav, interest } of processableEvalutionStatus) {
+    for (const { status, fav, interest } of processableEvaluationStatus) {
       sinceIdCursor = status.id;
       // 5 ~ 8
       const wantToFav = Math.floor(Math.random() * 4) + 5;

@@ -41,7 +41,7 @@ export class ChatbotStack extends Stack {
     super(scope, id, props);
 
     // The code that defines your stack goes here
-    const settingsTable = new Table(this, 'SettingsTable', {
+    new Table(this, 'SettingsTable', {
       partitionKey: { name: 'ID', type: AttributeType.STRING },
       billingMode: BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'expireAt',

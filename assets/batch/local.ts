@@ -17,4 +17,5 @@ const context: Context = {
   succeed: () => {},
 };
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises -- top level await 未対応
 handler(null, context, () => {});

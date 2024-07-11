@@ -47,6 +47,9 @@ app.get('/auth', async (ctx) => {
 
 function getRedirectUri(ctx: Context): string {
   const myHost = ctx.req.header(HeaderHost);
+  if (typeof myHost !== 'string') {
+    throw new Error('Host header is not found');
+  }
   return `https://${myHost}/auth/callback`;
 }
 

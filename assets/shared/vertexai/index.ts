@@ -13,14 +13,17 @@ export default async function generate(props: {
 
   console.log('Generating message...', props.systemInstruction, props.prompt);
   // Instantiate the models
+  const config = {
+    maxOutputTokens: 8192,
+    temperature: props.temperature ?? 1,
+    topP: 0.95,
+    // response_mime_type 型上ないけど、設定としては有効なのでセットしたい
+    response_mime_type: 'application/json',
+  };
+
   const generativeModel = vertexAI.preview.getGenerativeModel({
     model: model,
-    generationConfig: {
-      maxOutputTokens: 8192,
-      temperature: props.temperature ?? 1,
-      topP: 0.95,
-      response_mime_type: 'application/json',
-    } as any,
+    generationConfig: config,
     safetySettings: [
       {
         category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
@@ -52,10 +55,8 @@ export default async function generate(props: {
   console.log(JSON.stringify(res, null, 2));
   const message =
     res.candidates
-      ?.flatMap((candidate) =>
-        candidate.content.parts?.map((part) => part.text),
-      )
+      ?.flatMap((candidate) => candidate.content.parts.map((part) => part.text))
       .join('\n') ?? '';
 
-  return JSON.parse(message);
+  return JSON.parse(message) as unknown;
 }

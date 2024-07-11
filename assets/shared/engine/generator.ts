@@ -86,15 +86,11 @@ export async function getDailyTweetMessage(
     prompt: DailyTweet.prompt(now, todo, recentTopics),
   });
 
-  try {
-    const tweetMessage = v.parse(DailyTweet.schema, res);
-    // 改行をまとめる
-    tweetMessage.status = tweetMessage.status.replace(/\n+/g, '\n');
-    tweetMessage.next = tweetMessage.next.replace(/\n/g, '');
-    return tweetMessage;
-  } catch (e) {
-    return { error: 'parse_faild' };
-  }
+  const tweetMessage = v.parse(DailyTweet.schema, res);
+  // 改行をまとめる
+  tweetMessage.status = tweetMessage.status.replace(/\n+/g, '\n');
+  tweetMessage.next = tweetMessage.next.replace(/\n/g, '');
+  return tweetMessage;
 }
 
 type MessageHistory = {
@@ -142,11 +138,7 @@ export async function generateReplyMessage(
     prompt: ReplyTweet.prompt(screenName, messages),
   });
 
-  try {
-    return v.parse(ReplyTweet.schema, res);
-  } catch (e) {
-    return { error: 'parse_faild' };
-  }
+  return v.parse(ReplyTweet.schema, res);
 }
 
 type Status = Omit<MastodonStatus, 'text'> & { text: string };
@@ -205,7 +197,7 @@ ${formatTimeline.join(',\n')}
   },
 };
 
-export async function evaluteTimeline(timeline: Status[]) {
+export async function evaluateTimeline(timeline: Status[]) {
   if (timeline.length === 0) return [];
 
   const timelineMessage = timeline.map((status, id) => {
@@ -217,24 +209,19 @@ export async function evaluteTimeline(timeline: Status[]) {
     prompt: TimelineEvaluation.prompt(timelineMessage),
   });
 
-  let evalution;
-  try {
-    evalution = v.parse(TimelineEvaluation.schema, res);
-  } catch (e) {
-    return { error: 'parse_faild' };
-  }
+  const evaluation = v.parse(TimelineEvaluation.schema, res);
 
   // AIによる抜け漏れを防ぐため、timelineに対して評価を突合する
-  const evalutedStatuses = timeline.map((status, i) => {
-    const statusEvalution = evalution.find((e) => e.id === i);
+  const evaluatedStatuses = timeline.map((status, i) => {
+    const statusEvaluation = evaluation.find((e) => e.id === i);
     return {
       status,
-      interest: statusEvalution?.interest ?? 0,
-      fav: statusEvalution?.fav ?? 0,
+      interest: statusEvaluation?.interest ?? 0,
+      fav: statusEvaluation?.fav ?? 0,
     };
   });
 
-  return evalutedStatuses;
+  return evaluatedStatuses;
 }
 
 const ReplyApproach = {
@@ -254,10 +241,10 @@ ${CharacterSetting.trim()}
 }
 """
 `,
-  prompt(messag: string) {
+  prompt(message: string) {
     return `**対象メッセージ**
 """
-${messag}
+${message}
 """
 `;
   },
@@ -303,11 +290,7 @@ export async function generateMonthlySchedule(
     prompt: MonthlySchedule.prompt(month, endOfMonth),
   });
 
-  try {
-    return v.parse(MonthlySchedule.schema, res);
-  } catch (e) {
-    return { error: 'parse_failed' };
-  }
+  return v.parse(MonthlySchedule.schema, res);
 }
 
 const HourlyTodo = {
@@ -340,9 +323,5 @@ export async function generateHourlyTodo(slogan: string) {
     prompt: HourlyTodo.prompt(slogan),
   });
 
-  try {
-    return v.parse(HourlyTodo.schema, res);
-  } catch (e) {
-    return { error: 'parse_failed' };
-  }
+  return v.parse(HourlyTodo.schema, res);
 }
