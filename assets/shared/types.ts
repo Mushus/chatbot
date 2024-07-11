@@ -1,19 +1,25 @@
-export type MastodonApp = {
-  client_id: string;
-  client_secret: string;
-  id?: string;
-  name?: string;
-  redirect_uri?: string;
-  vapid_key?: string;
-  website?: string;
-};
+import * as v from 'valibot';
 
-export type MastodonToken = {
-  access_token: string;
-  token_type: string;
-  scope: string;
-  created_at?: number;
-};
+export const MastodonAppSchema = v.object({
+  client_id: v.string(),
+  client_secret: v.string(),
+  id: v.optional(v.string()),
+  name: v.optional(v.string()),
+  redirect_uri: v.optional(v.string()),
+  vapid_key: v.optional(v.string()),
+  website: v.optional(v.string()),
+});
+
+export type MastodonApp = v.InferInput<typeof MastodonAppSchema>;
+
+export const MastodonTokenSchema = v.object({
+  access_token: v.string(),
+  token_type: v.string(),
+  scope: v.string(),
+  created_at: v.optional(v.number()),
+});
+
+export type MastodonToken = v.InferInput<typeof MastodonTokenSchema>;
 
 export type MastodonAccount = {
   id: string;

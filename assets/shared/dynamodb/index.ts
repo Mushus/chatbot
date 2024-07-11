@@ -6,36 +6,42 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { docClient } from './dynamodb';
 import { TableName, MastodonDomain } from '../env/value';
-import { MastodonApp, MastodonToken } from '../types';
+import {
+  MastodonApp,
+  MastodonAppSchema,
+  MastodonToken,
+  MastodonTokenSchema,
+} from '../types';
 import { ulid } from 'ulid';
 import chunk from 'lodash/chunk';
+import * as v from 'valibot';
 
 function pad0(num: number | string, length: number): string {
   return num.toString().padStart(length, '0');
 }
 
-function appKey(): Record<string, any> {
+function appKey() {
   return {
     PK: `app#${MastodonDomain}`,
     SK: '#',
   };
 }
 
-function appTokenKey(): Record<string, any> {
+function appTokenKey() {
   return {
     PK: `app#${MastodonDomain}#token`,
     SK: '#',
   };
 }
 
-function appSinceIdKey(): Record<string, any> {
+function appSinceIdKey() {
   return {
     PK: `app#${MastodonDomain}#since_id`,
     SK: '#',
   };
 }
 
-function appTweetTopicKey(id: string): Record<string, any> {
+function appTweetTopicKey(id: string) {
   return {
     PK: appTweetTopicPK(),
     SK: `topic#${id}`,
@@ -46,11 +52,7 @@ function appTweetTopicPK(): string {
   return `app#${MastodonDomain}#topic`;
 }
 
-function dailySloganKey(
-  year: number,
-  month: number,
-  day: number,
-): Record<string, any> {
+function dailySloganKey(year: number, month: number, day: number) {
   return {
     PK: dailySloganPK,
     SK: dailySloganSK(year, month, day),
@@ -79,10 +81,13 @@ export async function findApp(): Promise<MastodonApp | undefined> {
   const res = await docClient.send(
     new GetCommand({ TableName, Key: appKey() }),
   );
-  return res.Item ? (res.Item as MastodonApp) : undefined;
+
+  if (!res.Item) return undefined;
+  const app = v.parse(MastodonAppSchema, res.Item);
+  return app;
 }
 
-export async function saveApp(app: MastodonApp) {
+export async function saveApp(app: MastodonApp): Promise<void> {
   await docClient.send(
     new PutCommand({
       TableName,
@@ -102,10 +107,12 @@ export async function findAppToken(): Promise<MastodonToken | null> {
     new GetCommand({ TableName, Key: appTokenKey() }),
   );
 
-  return res.Item ? (res.Item as MastodonToken) : null;
+  if (!res.Item) return null;
+  const appToken = v.parse(MastodonTokenSchema, res.Item);
+  return appToken;
 }
 
-export async function saveApiToken(res: MastodonToken) {
+export async function saveApiToken(res: MastodonToken): Promise<void> {
   await docClient.send(
     new PutCommand({
       TableName,
@@ -131,7 +138,7 @@ export async function findNotificationSinceId(): Promise<string | undefined> {
   return res.Item?.since_id;
 }
 
-export async function saveNotificationSinceId(sinceId: string) {
+export async function saveNotificationSinceId(sinceId: string): Promise<void> {
   await docClient.send(
     new PutCommand({
       TableName,
@@ -140,16 +147,31 @@ export async function saveNotificationSinceId(sinceId: string) {
   );
 }
 
-export async function saveRecentTweetTopic(topic: string, expireAt: number) {
+const RecentTweetTopicSchema = v.object({
+  PK: v.string(),
+  SK: v.string(),
+  text: v.string(),
+  expireAt: v.number(),
+});
+
+type RecentTweetTopic = v.InferInput<typeof RecentTweetTopicSchema>;
+
+export async function saveRecentTweetTopic(
+  topic: string,
+  expireAt: number,
+): Promise<void> {
   const id = ulid();
+
+  const item: RecentTweetTopic = {
+    ...appTweetTopicKey(id),
+    text: topic,
+    expireAt,
+  };
+
   await docClient.send(
     new PutCommand({
       TableName,
-      Item: {
-        ...appTweetTopicKey(id),
-        topic,
-        expireAt,
-      },
+      Item: item,
     }),
   );
 }
@@ -172,14 +194,21 @@ export async function queryRecentTweetTopics(limit: number): Promise<string[]> {
 
   if (!res.Items) return [];
 
-  return res.Items.map((item) => item.topic as string);
+  return res.Items.map((item) => v.parse(RecentTweetTopicSchema, item).text);
 }
+
+const DailySloganSchema = v.object({
+  PK: v.string(),
+  SK: v.string(),
+  text: v.string(),
+  expireAt: v.number(),
+});
 
 export async function queryDailySlogan(
   year: number,
   month: number,
   day: number,
-) {
+): Promise<string | undefined> {
   const res = await docClient.send(
     new GetCommand({
       TableName,
@@ -189,7 +218,8 @@ export async function queryDailySlogan(
 
   if (!res.Item) return undefined;
 
-  return res.Item.text as string | undefined;
+  const slogan = v.parse(DailySloganSchema, res.Item);
+  return slogan.text;
 }
 
 const MaxBatchWriteItem = 25;
@@ -199,34 +229,43 @@ export async function saveDailySlogan(
   month: number,
   schedule: Record<string, string>,
   expireAt: number,
-) {
-  await Promise.all(
-    chunk(Object.entries(schedule), MaxBatchWriteItem).map((schedules) =>
-      docClient.send(
-        new BatchWriteCommand({
-          RequestItems: {
-            [TableName]: schedules.map(([day, text]) => ({
-              PutRequest: {
-                Item: {
-                  ...dailySloganKey(year, month, Number(day)),
-                  text,
-                  expireAt,
-                },
-              },
-            })),
-          },
-        }),
-      ),
-    ),
-  );
+): Promise<void> {
+  const items = Object.entries(schedule).map(([day, text]) => ({
+    ...dailySloganKey(year, month, Number(day)),
+    text,
+    expireAt,
+  }));
+
+  const writeRequests = items.map((item) => ({
+    PutRequest: { Item: item },
+  }));
+
+  const processes = chunk(writeRequests, MaxBatchWriteItem).map((requests) => {
+    const command = new BatchWriteCommand({
+      RequestItems: {
+        [TableName]: requests,
+      },
+    });
+
+    return docClient.send(command);
+  });
+
+  await Promise.all(processes);
 }
+
+const HourlyTodoSchema = v.object({
+  PK: v.string(),
+  SK: v.string(),
+  text: v.string(),
+  expireAt: v.number(),
+});
 
 export async function queryHourlyTodo(
   year: number,
   month: number,
   day: number,
   hour: number,
-) {
+): Promise<string | undefined> {
   const res = await docClient.send(
     new GetCommand({
       TableName,
@@ -236,31 +275,38 @@ export async function queryHourlyTodo(
 
   if (!res.Item) return undefined;
 
-  return res.Item.text as string | undefined;
+  const todo = v.parse(HourlyTodoSchema, res.Item);
+  return todo.text;
 }
 
 export async function saveHourlyTodo(
   year: number,
   month: number,
   day: number,
-  todos: Record<string, string>,
+  todoTable: Record<string, string>,
   expireAt: number,
-) {
-  await docClient.send(
-    new BatchWriteCommand({
+): Promise<void> {
+  const items = Object.entries(todoTable).map(([hour, text]) => ({
+    ...hourlyTodoKey(year, month, day, Number(hour)),
+    text,
+    expireAt,
+  }));
+
+  const writeRequests = items.map((item) => ({
+    PutRequest: { Item: item },
+  }));
+
+  const processes = chunk(writeRequests, MaxBatchWriteItem).map((requests) => {
+    const command = new BatchWriteCommand({
       RequestItems: {
-        [TableName]: Object.entries(todos).map(([hour, text]) => ({
-          PutRequest: {
-            Item: {
-              ...hourlyTodoKey(year, month, day, hour),
-              text,
-              expireAt,
-            },
-          },
-        })),
+        [TableName]: requests,
       },
-    }),
-  );
+    });
+
+    return docClient.send(command);
+  });
+
+  await Promise.all(processes);
 }
 
 export async function updateHourlyTodo(
@@ -269,7 +315,7 @@ export async function updateHourlyTodo(
   day: number,
   hour: number,
   text: string,
-) {
+): Promise<void> {
   await docClient.send(
     new PutCommand({
       TableName,
