@@ -1,5 +1,4 @@
 import striptags from 'striptags';
-import * as v from 'valibot';
 import {
   findAppTimelineSinceId,
   saveAppTimelineSinceId,
@@ -12,7 +11,6 @@ import {
   viewStatus,
 } from '../mastodon';
 import { MastodonStatus, MastodonToken } from '../types';
-import generate from '../vertexai';
 import { evaluteTimeline, generateReplyApproach } from './generator';
 
 export default async function readTimeline(token: MastodonToken) {
