@@ -1,5 +1,4 @@
 import striptags from 'striptags';
-import { findNotificationSinceId, saveNotificationSinceId } from '../dynamodb';
 import {
   follow,
   getAllNotifications,
@@ -17,6 +16,10 @@ import {
   generateFollowGreetingMessage,
   generateReplyMessage,
 } from './generator';
+import {
+  findNotificationSinceId,
+  saveNotificationSinceId,
+} from '../dynamodb/notification';
 
 export default async function readNotification(token: MastodonToken) {
   let sinceId = await findNotificationSinceId();

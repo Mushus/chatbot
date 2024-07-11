@@ -1,13 +1,9 @@
 import dayjs from 'dayjs';
 import {
-  queryDailySlogan,
   queryHourlyTodo,
-  queryRecentTweetTopics,
-  saveDailySlogan,
   saveHourlyTodo,
-  saveRecentTweetTopic,
   updateHourlyTodo,
-} from '../dynamodb';
+} from '../dynamodb/hourlyTodo';
 import { updateStatus as updateStatusInternal } from '../mastodon';
 import { MastodonToken } from '../types';
 import {
@@ -15,6 +11,11 @@ import {
   generateMonthlySchedule,
   getDailyTweetMessage,
 } from './generator';
+import {
+  queryRecentTweetTopics,
+  saveRecentTweetTopic,
+} from '../dynamodb/tweetTopic';
+import { queryDailySlogan, saveDailySlogan } from '../dynamodb/dailySlogan';
 
 const TweetFequency = 1 / 10;
 

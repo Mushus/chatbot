@@ -1,4 +1,5 @@
-import { findApp, findAppToken, saveApiToken, saveApp } from '../dynamodb';
+import { findApp, saveApp } from '../dynamodb/app';
+import { findAppToken, saveApiToken } from '../dynamodb/token';
 import { createApp, createAppToken, createAuthorizationUrl } from '../mastodon';
 import { MastodonToken } from '../types';
 
