@@ -22,6 +22,11 @@ export async function findAppToken(): Promise<MastodonToken | null> {
 }
 
 export async function saveApiToken(res: MastodonToken): Promise<void> {
+  const item: MastodonToken & { PK: string; SK: string } = {
+    ...res,
+    ...appTokenKey(),
+  };
+
   await docClient.send(
     new PutCommand({
       TableName,
@@ -31,7 +36,7 @@ export async function saveApiToken(res: MastodonToken): Promise<void> {
         '#pk': 'PK',
         '#sk': 'SK',
       },
-      Item: { ...appTokenKey(), ...res },
+      Item: item,
     }),
   );
 }

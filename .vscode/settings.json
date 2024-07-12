@@ -4,8 +4,10 @@
         "gaxios",
         "Hono",
         "Millis",
+        "mushus",
         "ofetch",
         "striptags",
+        "tweeet",
         "valibot",
         "vertexai"
     ]

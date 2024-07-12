@@ -1,8 +1,13 @@
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
-import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
-import { FunctionUrlAuthType, Runtime } from 'aws-cdk-lib/aws-lambda';
-import { BundlingOptions, NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { AttributeType, TableV2 } from 'aws-cdk-lib/aws-dynamodb';
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
+import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import path from 'path';
 import {
   EnvAppName,
@@ -12,52 +17,32 @@ import {
   EnvMastodonDomain,
   EnvTableSettings,
 } from '../assets/shared/env/key';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
-import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
+import Lambda from './construct/Lambda';
 
-const bundling: BundlingOptions = {
-  esbuildArgs: {
-    // '--main-fields': 'module,main',
-    // '--minify': true,
-    // '--keep-names': true,
-  },
-  commandHooks: {
-    beforeInstall() {
-      return [``];
-    },
-    beforeBundling() {
-      return [``];
-    },
-    afterBundling(inputDir, outputDir) {
-      return [`cp ${inputDir}/assets/clientLibraryConfig.json ${outputDir}`];
-    },
-  },
-};
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const WakeUpTime = dayjs.tz('0000-00-00 08:00:00', 'Asia/Tokyo').utc();
+const ShutdownTime = dayjs.tz('0000-00-00 22:00:00', 'Asia/Tokyo').utc();
 
 export class ChatbotStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
-    new Table(this, 'SettingsTable', {
-      partitionKey: { name: 'ID', type: AttributeType.STRING },
-      billingMode: BillingMode.PAY_PER_REQUEST,
-      timeToLiveAttribute: 'expireAt',
-    });
-
-    const chatbotTbl = new Table(this, 'ChatbotTbl', {
+    const chatbotTbl = new TableV2(this, 'ChatbotData', {
       partitionKey: { name: 'PK', type: AttributeType.STRING },
       sortKey: { name: 'SK', type: AttributeType.STRING },
-      billingMode: BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'expireAt',
     });
 
-    const logGroup = new LogGroup(this, 'ChatbotFunctionLogGroup', {
-      logGroupName: `/aws/lambda/chatbot`,
-      retention: RetentionDays.THREE_MONTHS,
-    });
+    const environment = {
+      [EnvMastodonDomain]: 'm.mushus.net',
+      [EnvTableSettings]: chatbotTbl.tableName,
+      [EnvAppName]: 'tweeet',
+      [EnvGoogleApplicationCredentials]: './clientLibraryConfig.json',
+      [EnvGoogleCloudProject]: 'chatbot-428611',
+      [EnvGoogleCloudLocation]: 'asia-northeast1',
+    };
 
     const role = new Role(this, 'ChatbotFunctionRole', {
       roleName: 'Chatbot', // google: The size of mapped attribute google.subject exceeds the 127 bytes limit. Either modify your attribute mapping or the incoming assertion to produce a mapped attribute that is less than 127 bytes.
@@ -70,53 +55,47 @@ export class ChatbotStack extends Stack {
     );
     chatbotTbl.grantReadWriteData(role);
 
-    const chatbotFunction = new NodejsFunction(this, 'ChatbotFunction', {
-      entry: path.join(__dirname, '../assets/chatbot/index.ts'),
-      handler: 'handler',
-      runtime: Runtime.NODEJS_20_X,
-      logGroup: logGroup,
+    const webUI = new Lambda(this, 'WebUI', {
+      logName: 'web-ui',
+      entry: path.join(__dirname, '../assets/web-ui/index.ts'),
       role,
-      environment: {
-        [EnvMastodonDomain]: 'm.mushus.net',
-        [EnvTableSettings]: chatbotTbl.tableName,
-        [EnvAppName]: 'tweeet',
-        [EnvGoogleApplicationCredentials]: './clientLibraryConfig.json',
-        [EnvGoogleCloudProject]: 'chatbot-428611',
-        [EnvGoogleCloudLocation]: 'asia-northeast1',
-      },
-      timeout: Duration.minutes(1),
-      bundling,
+      timeout: Duration.seconds(10),
+      environment,
     });
-    chatbotFunction.addFunctionUrl({
+    webUI.fn.addFunctionUrl({
       authType: FunctionUrlAuthType.NONE,
     });
 
-    const batchLog = new LogGroup(this, 'BatchLogGroup', {
-      logGroupName: `/aws/lambda/chatbot/batch`,
-      retention: RetentionDays.THREE_MONTHS,
-    });
-
-    const batchStateFn = new NodejsFunction(this, 'BatchStateFn', {
-      entry: path.join(__dirname, '../assets/batch/index.ts'),
-      handler: 'handler',
-      runtime: Runtime.NODEJS_20_X,
-      logGroup: batchLog,
+    const wakeUp = new Lambda(this, 'WakeUp', {
+      logName: 'wake-up',
+      entry: path.join(__dirname, '../assets/wake-up/index.ts'),
       role,
-      environment: {
-        [EnvMastodonDomain]: 'm.mushus.net',
-        [EnvTableSettings]: chatbotTbl.tableName,
-        [EnvAppName]: 'chatbot',
-        [EnvGoogleApplicationCredentials]: './clientLibraryConfig.json',
-        [EnvGoogleCloudProject]: 'chatbot-428611',
-        [EnvGoogleCloudLocation]: 'asia-northeast1',
-      },
-      timeout: Duration.minutes(1),
-      bundling,
+      timeout: Duration.minutes(10),
+      environment,
     });
+    const WakeUpBatchTime = WakeUpTime.add(-10, 'minute');
+    console.log(WakeUpBatchTime.toString());
+    const wakeUpRule = new Rule(this, 'WakeUpRule', {
+      schedule: Schedule.cron({
+        minute: WakeUpBatchTime.minute().toString(),
+        hour: WakeUpBatchTime.hour().toString(),
+      }),
+    });
+    wakeUpRule.addTarget(new LambdaFunction(wakeUp.fn));
 
-    const cron = new Rule(this, 'BatchRule', {
-      schedule: Schedule.cron({ minute: '*/10', hour: '23-14' }), // UTC
+    const batch = new Lambda(this, 'Batch', {
+      logName: 'batch2',
+      entry: path.join(__dirname, '../assets/batch/index.ts'),
+      role,
+      timeout: Duration.minutes(3),
+      environment,
     });
-    cron.addTarget(new LambdaFunction(batchStateFn));
+    const cron = new Rule(this, 'BatchRule', {
+      schedule: Schedule.cron({
+        minute: '*/10',
+        hour: `${WakeUpTime.hour()}-${ShutdownTime.hour()}`,
+      }),
+    });
+    cron.addTarget(new LambdaFunction(batch.fn));
   }
 }
