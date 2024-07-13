@@ -66,6 +66,17 @@ export class ChatbotStack extends Stack {
       authType: FunctionUrlAuthType.NONE,
     });
 
+    const dashboard = new Lambda(this, 'Dashboard', {
+      logName: 'dashboard',
+      entry: path.join(__dirname, '../../assets/dashboard/index.ts'),
+      role,
+      timeout: Duration.seconds(6),
+      environment,
+    });
+    dashboard.fn.addFunctionUrl({
+      authType: FunctionUrlAuthType.NONE,
+    });
+
     const wakeUp = new Lambda(this, 'WakeUp', {
       logName: 'wake-up',
       entry: path.join(__dirname, '../../assets/wake-up/index.ts'),
@@ -74,7 +85,6 @@ export class ChatbotStack extends Stack {
       environment,
     });
     const WakeUpBatchTime = WakeUpTime.add(-10, 'minute');
-    console.log(WakeUpBatchTime.toString());
     const wakeUpRule = new Rule(this, 'WakeUpRule', {
       schedule: Schedule.cron({
         minute: WakeUpBatchTime.minute().toString(),

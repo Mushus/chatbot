@@ -1,5 +1,5 @@
+import { type Context, Hono } from 'hono';
 import { vValidator } from '@hono/valibot-validator';
-import { Context, Hono } from 'hono';
 import * as v from 'valibot';
 import {
   AppNotFoundError,

@@ -8,8 +8,10 @@ import { TimestampUTC } from '../const';
 const StateSchema = v.object({
   PK: v.string(),
   SK: v.string(),
-  location: v.string(),
-  situation: v.string(),
+  location: v.optional(v.string()),
+  situation: v.optional(v.string()),
+  thinking: v.optional(v.string()),
+  action: v.optional(v.string()),
   expireAt: v.number(),
 });
 
@@ -24,7 +26,7 @@ function key(dayjs: dayjs.Dayjs) {
 
 const PK = `app#${MastodonDomain}#state`;
 
-export async function findLatestState() {
+export async function queryStateHistory(props: { limit: number }) {
   const command = new QueryCommand({
     TableName,
     KeyConditionExpression: '#pk = :pk',
@@ -35,25 +37,37 @@ export async function findLatestState() {
       ':pk': PK,
     },
     ScanIndexForward: false,
-    Limit: 1,
+    Limit: props.limit,
   });
   const res = await docClient.send(command);
 
-  const item = res.Items?.[0];
-  if (!item) return undefined;
+  const items = res.Items;
+  if (!items) return [];
 
-  return v.parse(StateSchema, item);
+  return items
+    .map((item) => v.parse(StateSchema, item))
+    .map((item) => ({
+      time: dayjs.tz(item.SK, TimestampUTC, 'UTC'),
+      location: item.location,
+      situation: item.situation,
+      thinking: item.thinking,
+      action: item.action,
+    }));
 }
 
 export async function saveState(
   time: dayjs.Dayjs,
   location: string,
   situation: string,
+  thinking: string,
+  action: string,
 ) {
   const item: State = {
     ...key(time),
     location,
     situation,
+    thinking,
+    action,
     expireAt: time.add(1, 'day').unix(),
   };
 

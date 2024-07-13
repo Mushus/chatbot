@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import * as v from 'valibot';
 import { MastodonStatus } from '../types';
 import generate from '../vertexai';
+import { MinutesTimeFormat, TzTokyo } from '../const';
 
 const followBackGreetings = [
   'わぁ、フォローありがとうございます！嬉しいです😊💖',
@@ -91,12 +92,57 @@ const ActionsSystemInstruction = `**あなたについて**
 ${CharacterPersonality.trim()}
 `;
 
-function actionPrompt(state: State) {
-  return `現在の状況からどんな行動をすべき？
+function timeMessage(time: dayjs.Dayjs) {
+  switch (time.hour()) {
+    case 6:
+      return 'おはようございます！';
+    case 7:
+    case 8:
+      return '朝食の時間です。';
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+      return '昼ご飯の時間です。';
+    case 13:
+    case 14:
+      return 'こんにちは。';
+    case 15:
+      return 'おやつの時間です。';
+    case 16:
+    case 17:
+      return 'こんにちは。';
+    case 18:
+      return '日が落ちて暗くなってきました。';
+    case 19:
+      return '夕飯の時間です。';
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+      return '就寝時間です。';
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      return '就寝時間です。';
+    default:
+      return '';
+  }
+}
 
-現在時刻: ${state.time.format('YYYY/MM/DD HH:mm:ss')}
-場所: ${state.location}
-シチュエーション: ${state.situation}
+function actionPrompt(state: State) {
+  const time = state.time.tz(TzTokyo);
+  return `${timeMessage(time)}
+現在時刻は「${time.format(MinutesTimeFormat)}」です。
+何をしますか？
+
+**過去の行動履歴**
+
+上から新しい順に並んでいます。
+${state.stateHistory.map(({ time, location, situation }) => JSON.stringify({ time: time.tz(TzTokyo).format(MinutesTimeFormat), location, situation })).join('\n')}
 
 **出力フォーマット**
 """
@@ -120,8 +166,11 @@ function actionPrompt(state: State) {
 
 type State = {
   time: dayjs.Dayjs;
-  location: string;
-  situation: string;
+  stateHistory: {
+    time: dayjs.Dayjs;
+    location: string;
+    situation: string;
+  }[];
 };
 
 export async function generateAction(state: State) {
