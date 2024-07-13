@@ -1,6 +1,6 @@
 import { type Handler } from 'aws-lambda';
-import { batch } from '../shared/engine';
+import { wakeUp } from '../shared/engine/live';
 
 export const handler: Handler = async () => {
-  await batch();
+  await wakeUp();
 };

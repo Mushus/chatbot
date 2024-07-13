@@ -33,18 +33,110 @@ const CharacterSetting = `名前: 餅月ルナ
 一人称: ルーちゃ
 口調: ～でございますねー / ですねぇー / わー / わぁ
 文章の特徴: 突然叫びだす / 敬語を間違える / たまにタメ口が出てしまう
-性格: おっとり癒し系 / 天然 / 興味津々
 `;
+
+const CharacterPersonality = `性格: おっとり癒し系 / 天然 / 興味津々 / サブカル好き / 一人が好き`;
 
 export function generateFollowGreetingMessage() {
   const messageIndex = Math.floor(Math.random() * followBackGreetings.length);
   return followBackGreetings[messageIndex];
 }
 
+const SituationSchema = v.array(v.string());
+
+export type Situation = v.InferInput<typeof SituationSchema>;
+
+const GameMasterSystemInstruction = `**あなたについて**
+
+${CharacterPersonality.trim()}
+`;
+
+const nextSituationPrompt = `今日の予定/目標を配列として出力してください。
+
+**出力フォーマット**
+"""
+// 箇条書きの今日の目標のリスト
+Array<string>
+"""
+`;
+
+export async function generateGameMasterMessage() {
+  const res = await generate({
+    systemInstruction: GameMasterSystemInstruction,
+    prompt: nextSituationPrompt,
+  });
+
+  return v.parse(SituationSchema, res);
+}
+
+const ActionsSchema = v.object({
+  /** 覚醒度 -1 ~ +1*/
+  arousal: v.number(),
+  /** 感情価 -1 ~ +1 */
+  valence: v.number(),
+  /** 思考 */
+  thinking: v.string(),
+  /** 行動 */
+  action: v.string(),
+  /** 行動後の場所 */
+  nextLocation: v.string(),
+  /** 行動後のシチュエーション */
+  nextSituation: v.string(),
+});
+
+export type Action = v.InferInput<typeof ActionsSchema>;
+
+const ActionsSystemInstruction = `**あなたについて**
+
+${CharacterPersonality.trim()}
+`;
+
+function actionPrompt(state: State) {
+  return `現在の状況からどんな行動をすべき？
+
+現在時刻: ${state.time.format('YYYY/MM/DD HH:mm:ss')}
+場所: ${state.location}
+シチュエーション: ${state.situation}
+
+**出力フォーマット**
+"""
+{
+  // 覚醒度 -1 ~ +1
+  arousal: number;
+  // 感情価 -1 ~ +1
+  valence: number;
+  // 思考
+  thinking: string;
+  // 行動
+  action: string;
+  // 行動後の場所
+  nextLocation: string;
+  // 行動後のシチュエーション
+  nextSituation: string;
+}
+"""
+`;
+}
+
+type State = {
+  time: dayjs.Dayjs;
+  location: string;
+  situation: string;
+};
+
+export async function generateAction(state: State) {
+  const res = await generate({
+    systemInstruction: ActionsSystemInstruction,
+    prompt: actionPrompt(state),
+  });
+
+  return v.parse(ActionsSchema, res);
+}
+
 const DailyTweet = {
   schema: v.object({
     status: v.string(),
-    keyword: v.pipe(v.string(), v.maxLength(20)),
+    keyword: v.string(),
     next: v.string(),
   }),
   systemInstruction: `以下のキャラクタとしてマイクロブログに投稿してください。
@@ -106,6 +198,7 @@ const ReplyTweet = {
   systemInstruction: `以下のキャラクタとして返信を行ってください。
 
 ${CharacterSetting.trim()}
+${CharacterPersonality.trim()}
 
 与えれたシチュエーションや設定を元にポストを行ってください。
 
@@ -232,6 +325,7 @@ const ReplyApproach = {
 ポストの長さは1~3文からランダムに選択してください。
 
 ${CharacterSetting.trim()}
+${CharacterPersonality.trim()}
 
 **出力フォーマット**
 """

@@ -17,7 +17,7 @@ import {
 } from '../dynamodb/tweetTopic';
 import { queryDailySlogan, saveDailySlogan } from '../dynamodb/dailySlogan';
 
-const TweetFrequency = 1 / 10;
+const TweetFrequency = 1 / 15;
 
 export default async function randomPost(token: MastodonToken) {
   if (Math.random() >= TweetFrequency) return;
@@ -29,7 +29,7 @@ export default async function randomPost(token: MastodonToken) {
   const recentTopics = await queryRecentTweetTopics(10);
 
   const dailyMessage = await getDailyTweetMessage(now, todo, recentTopics);
-  if ('error' in dailyMessage) return;
+
   const { status, keyword, next } = dailyMessage;
 
   const year = now.year();

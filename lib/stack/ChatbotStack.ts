@@ -16,14 +16,14 @@ import {
   EnvGoogleCloudProject,
   EnvMastodonDomain,
   EnvTableSettings,
-} from '../assets/shared/env/key';
-import Lambda from './construct/Lambda';
+} from '../../assets/shared/env/key';
+import Lambda from '../construct/Lambda';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const WakeUpTime = dayjs.tz('0000-00-00 08:00:00', 'Asia/Tokyo').utc();
-const ShutdownTime = dayjs.tz('0000-00-00 22:00:00', 'Asia/Tokyo').utc();
+const ShutdownTime = dayjs.tz('0000-00-00 01:00:00', 'Asia/Tokyo').utc();
 
 export class ChatbotStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -57,7 +57,7 @@ export class ChatbotStack extends Stack {
 
     const webUI = new Lambda(this, 'WebUI', {
       logName: 'web-ui',
-      entry: path.join(__dirname, '../assets/web-ui/index.ts'),
+      entry: path.join(__dirname, '../../assets/web-ui/index.ts'),
       role,
       timeout: Duration.seconds(10),
       environment,
@@ -68,7 +68,7 @@ export class ChatbotStack extends Stack {
 
     const wakeUp = new Lambda(this, 'WakeUp', {
       logName: 'wake-up',
-      entry: path.join(__dirname, '../assets/wake-up/index.ts'),
+      entry: path.join(__dirname, '../../assets/wake-up/index.ts'),
       role,
       timeout: Duration.minutes(10),
       environment,
@@ -84,8 +84,8 @@ export class ChatbotStack extends Stack {
     wakeUpRule.addTarget(new LambdaFunction(wakeUp.fn));
 
     const batch = new Lambda(this, 'Batch', {
-      logName: 'batch2',
-      entry: path.join(__dirname, '../assets/batch/index.ts'),
+      logName: 'batch',
+      entry: path.join(__dirname, '../../assets/batch/index.ts'),
       role,
       timeout: Duration.minutes(3),
       environment,

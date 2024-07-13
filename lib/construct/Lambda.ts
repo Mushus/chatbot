@@ -1,6 +1,6 @@
 import { Duration } from 'aws-cdk-lib';
 import { Role } from 'aws-cdk-lib/aws-iam';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
@@ -35,6 +35,7 @@ export default class Lambda extends Construct {
       environment,
       timeout,
       bundling,
+      architecture: Architecture.ARM_64,
     });
 
     this.fn = fn;

@@ -1,13 +1,17 @@
 import striptags from 'striptags';
 import {
+  findNotificationSinceId,
+  saveNotificationSinceId,
+} from '../dynamodb/notification';
+import {
   follow,
   getAllNotifications,
   updateStatus as updateStatusInternal,
-  verifyCredentials,
   viewStatus,
 } from '../mastodon';
 import {
   MastodonAccount,
+  MastodonCredentials,
   MastodonMentionNotification,
   MastodonNotification,
   MastodonToken,
@@ -16,12 +20,11 @@ import {
   generateFollowGreetingMessage,
   generateReplyMessage,
 } from './generator';
-import {
-  findNotificationSinceId,
-  saveNotificationSinceId,
-} from '../dynamodb/notification';
 
-export default async function readNotification(token: MastodonToken) {
+export default async function readNotification(
+  token: MastodonToken,
+  cred: MastodonCredentials,
+) {
   let sinceId = await findNotificationSinceId();
 
   const notifications: MastodonNotification[] = [];
@@ -52,7 +55,7 @@ export default async function readNotification(token: MastodonToken) {
           break;
         }
         case 'mention': {
-          await responseReply(token, notification);
+          await responseReply(token, cred, notification);
           break;
         }
       }
@@ -75,10 +78,9 @@ async function postGreetingStatus(
 
 async function responseReply(
   token: MastodonToken,
+  cred: MastodonCredentials,
   mention: MastodonMentionNotification,
 ) {
-  const credentials = await verifyCredentials(token);
-
   const statusList = [mention.status];
   let statusCursor = mention.status;
   for (let i = 0; i < 5; i++) {
@@ -97,7 +99,7 @@ async function responseReply(
     })
     .reverse();
 
-  const reply = await generateReplyMessage(credentials.username, messages);
+  const reply = await generateReplyMessage(cred.username, messages);
   if ('error' in reply) return;
   const { status } = reply;
 

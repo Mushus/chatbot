@@ -6,16 +6,16 @@ import {
 import {
   favouriteStatus,
   updateStatus as updateStatusInternal,
-  verifyCredentials,
   viewHomeTimeline,
   viewStatus,
 } from '../mastodon';
-import { MastodonStatus, MastodonToken } from '../types';
+import { MastodonCredentials, MastodonStatus, MastodonToken } from '../types';
 import { evaluateTimeline, generateReplyApproach } from './generator';
 
-export default async function readTimeline(token: MastodonToken) {
-  const credentials = await verifyCredentials(token);
-
+export default async function readTimeline(
+  token: MastodonToken,
+  cred: MastodonCredentials,
+) {
   const sinceId = await findAppTimelineSinceId();
   const timeline = await viewHomeTimeline(token, {
     limit: 20,
@@ -27,7 +27,7 @@ export default async function readTimeline(token: MastodonToken) {
       ...status,
       text: status.text ?? striptags(status.content),
     }))
-    .filter((status) => status.account.id !== credentials.id)
+    .filter((status) => status.account.id !== cred.id)
     .filter((status) => status.in_reply_to_id === undefined)
     .filter((status) => !status.text.startsWith('@'));
   const evaluation = await evaluateTimeline(targetStatuses);

@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { ChatbotStack } from '../lib/chatbot-stack';
+import { ChatbotStack } from '../lib/stack/ChatbotStack';
 
 const app = new cdk.App();
 new ChatbotStack(app, 'ChatbotStack', {
