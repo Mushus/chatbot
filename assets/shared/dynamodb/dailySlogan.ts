@@ -1,5 +1,5 @@
 import { BatchWriteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import chunk from 'lodash/chunk';
+import { chunk } from 'es-toolkit/array';
 import * as v from 'valibot';
 import { MastodonDomain, TableName } from '../env/value';
 import { pad0 } from '../util';
