@@ -3,18 +3,22 @@ import dayjs from 'dayjs';
 import { docClient } from './dynamodb';
 import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import * as v from 'valibot';
+import { TimestampUTC } from '../const';
 
 const StateSchema = v.object({
   PK: v.string(),
   SK: v.string(),
   location: v.string(),
   situation: v.string(),
+  expireAt: v.number(),
 });
+
+type State = v.InferInput<typeof StateSchema>;
 
 function key(dayjs: dayjs.Dayjs) {
   return {
     PK: PK,
-    SK: dayjs.utc().unix().toString(),
+    SK: dayjs.utc().format(TimestampUTC),
   };
 }
 
@@ -46,10 +50,11 @@ export async function saveState(
   location: string,
   situation: string,
 ) {
-  const item = {
+  const item: State = {
     ...key(time),
     location,
     situation,
+    expireAt: time.add(1, 'day').unix(),
   };
 
   const command = new PutCommand({
