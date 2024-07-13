@@ -23,9 +23,12 @@ const PK = `app#${MastodonDomain}#state`;
 export async function findLatestState() {
   const command = new QueryCommand({
     TableName,
-    KeyConditionExpression: 'PK = :pk',
+    KeyConditionExpression: '#pk = :pk',
+    ExpressionAttributeNames: {
+      '#pk': 'PK',
+    },
     ExpressionAttributeValues: {
-      ':pk': { S: PK },
+      ':pk': PK,
     },
     ScanIndexForward: false,
     Limit: 1,

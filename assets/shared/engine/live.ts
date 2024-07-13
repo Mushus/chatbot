@@ -12,8 +12,7 @@ export async function wakeUp() {
   const location = DefaultLocation;
   const situation = DefaultSituation;
 
-  const action = await generateAction({ time, location, situation });
-  await saveState(time, action.nextLocation, action.nextSituation);
+  await saveState(time, location, situation);
 }
 
 export async function live(_token: Token, _cred: MastodonCredentials) {
