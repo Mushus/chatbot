@@ -5,8 +5,8 @@ import {
   AppNotFoundError,
   authorizeStart,
   createToken,
-} from '../shared/engine/auth';
-import { AppName } from '../shared/env/value';
+} from '../core/engine/auth';
+import { AppName } from '../core/env/value';
 
 const HeaderHost = 'Host';
 

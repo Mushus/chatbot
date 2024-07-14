@@ -1,4 +1,4 @@
-import '../shared/config';
+import '../core/config';
 
 import { handle } from 'hono/aws-lambda';
 import app from './app';

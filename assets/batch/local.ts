@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import '../shared/config';
+import '../core/config';
 
 import { handler } from './index';
 import { Context } from 'aws-lambda';

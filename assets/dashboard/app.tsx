@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { queryStateHistory } from '../shared/dynamodb/state';
-import { AppName } from '../shared/env/value';
+import { queryStateHistory } from '../core/dynamodb/state';
+import { AppName } from '../core/env/value';
 
 const app = new Hono();
 

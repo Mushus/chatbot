@@ -16,7 +16,7 @@ import {
   EnvGoogleCloudProject,
   EnvMastodonDomain,
   EnvTableSettings,
-} from '../../assets/shared/env/key';
+} from '../../assets/core/env/key';
 import Lambda from '../construct/Lambda';
 
 dayjs.extend(utc);
