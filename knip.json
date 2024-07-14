@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["bin/chatbot.ts", "assets/*/*.ts"],
+  "project": ["**/*.ts"],
+  "ignoreDependencies": ["esbuild", "@tsconfig/strictest", "es-toolkit", "gaxios"]
+}

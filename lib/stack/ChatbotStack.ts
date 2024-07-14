@@ -102,7 +102,7 @@ export class ChatbotStack extends Stack {
     });
     const cron = new Rule(this, 'BatchRule', {
       schedule: Schedule.cron({
-        minute: '*/10',
+        minute: '*/15',
         hour: `${WakeUpTime.hour()}-${ShutdownTime.hour()}`,
       }),
     });

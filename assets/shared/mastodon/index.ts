@@ -87,10 +87,10 @@ export async function getAllNotifications(
   token: MastodonToken,
   param: {
     /** max: 80 */
-    limit?: number;
-    min_id?: string;
-    max_id?: string;
-    since_id?: string;
+    limit?: number | undefined;
+    min_id?: string | undefined;
+    max_id?: string | undefined;
+    since_id?: string | undefined;
   },
 ) {
   const res = await fedClient<MastodonNotification[]>('/api/v1/notifications', {
@@ -132,11 +132,11 @@ export async function verifyCredentials(token: MastodonToken) {
 export async function viewHomeTimeline(
   token: MastodonToken,
   param: {
-    max_id?: string;
-    since_id?: string;
-    min_id?: string;
+    max_id?: string | undefined;
+    since_id?: string | undefined;
+    min_id?: string | undefined;
     /** max: 40 */
-    limit?: number;
+    limit?: number | undefined;
   },
 ) {
   const res = await fedClient<MastodonStatus[]>('/api/v1/timelines/home', {

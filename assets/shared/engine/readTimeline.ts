@@ -22,25 +22,36 @@ export default async function readTimeline(
     since_id: sinceId,
   });
 
-  const targetStatuses = timeline
+  const readTargetStatus = timeline
     .map((status) => ({
       ...status,
       text: status.text ?? striptags(status.content),
     }))
     .filter((status) => status.account.id !== cred.id)
-    .filter((status) => status.in_reply_to_id === undefined)
+    .filter((status) => status.in_reply_to_id === null)
     .filter((status) => !status.text.startsWith('@'));
-  const evaluation = await evaluateTimeline(targetStatuses);
+  const evaluation = await evaluateTimeline(readTargetStatus);
   if ('error' in evaluation) {
     return;
   }
 
+  const statusEvaluations = Object.fromEntries(
+    evaluation.map((e) => [e.status.id, e] as const),
+  );
+
   let sinceIdCursor = sinceId;
   // 下から読むとエラーがあったときに最小限で済む
-  const processableEvaluationStatus = [...evaluation].reverse();
+  const readableTimeline = [...timeline].reverse();
   try {
-    for (const { status, fav, interest } of processableEvaluationStatus) {
+    for (const status of readableTimeline) {
       sinceIdCursor = status.id;
+
+      // not evaluated
+      const statusEvaluation = statusEvaluations[status.id];
+      if (statusEvaluation === undefined) continue;
+
+      const { fav, interest } = statusEvaluation;
+
       // 5 ~ 8
       const wantToFav = Math.floor(Math.random() * 4) + 5;
       if (fav > wantToFav) {

@@ -1,8 +1,23 @@
 import {
   HarmBlockThreshold,
   HarmCategory,
+  ModelParams,
 } from '@google-cloud/vertexai/build/src/types/content';
-import { vertexAI } from './vertexai';
+import { VertexAI } from '@google-cloud/vertexai/build/src/vertex_ai';
+import { instance } from 'gaxios';
+import { GoogleCloudLocation, GoogleCloudProject } from '../env/value';
+
+const vertexAI = new VertexAI({
+  project: GoogleCloudProject,
+  location: GoogleCloudLocation,
+});
+
+// for debug
+instance.defaults.errorRedactor = (data) => {
+  console.error('errorRedactor', data.config);
+  console.error('errorRedactor', data.response?.data);
+  return {};
+};
 
 export default async function generate(props: {
   systemInstruction?: string;
@@ -21,7 +36,7 @@ export default async function generate(props: {
     response_mime_type: 'application/json',
   };
 
-  const generativeModel = vertexAI.preview.getGenerativeModel({
+  const modelParams: ModelParams = {
     model: model,
     generationConfig: config,
     safetySettings: [
@@ -42,8 +57,13 @@ export default async function generate(props: {
         threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
       },
     ],
-    systemInstruction: props.systemInstruction,
-  });
+  };
+
+  if (props.systemInstruction) {
+    modelParams.systemInstruction = props.systemInstruction;
+  }
+
+  const generativeModel = vertexAI.preview.getGenerativeModel(modelParams);
 
   const req = {
     contents: [{ role: 'user', parts: [{ text: props.prompt }] }],

@@ -31,8 +31,8 @@ export type MastodonStatus = {
   id: string;
   uri: string;
   url: string;
-  in_reply_to_id?: string;
-  in_reply_to_account_id?: string;
+  in_reply_to_id: string | null;
+  in_reply_to_account_id: string | null;
   account: MastodonAccount;
   content: string;
   mentions: MastodonMention[];

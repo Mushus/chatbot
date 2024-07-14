@@ -43,33 +43,6 @@ export function generateFollowGreetingMessage() {
   return followBackGreetings[messageIndex];
 }
 
-const SituationSchema = v.array(v.string());
-
-export type Situation = v.InferInput<typeof SituationSchema>;
-
-const GameMasterSystemInstruction = `**あなたについて**
-
-${CharacterPersonality.trim()}
-`;
-
-const nextSituationPrompt = `今日の予定/目標を配列として出力してください。
-
-**出力フォーマット**
-"""
-// 箇条書きの今日の目標のリスト
-Array<string>
-"""
-`;
-
-export async function generateGameMasterMessage() {
-  const res = await generate({
-    systemInstruction: GameMasterSystemInstruction,
-    prompt: nextSituationPrompt,
-  });
-
-  return v.parse(SituationSchema, res);
-}
-
 const ActionsSchema = v.object({
   /** 覚醒度 -1 ~ +1*/
   arousal: v.number(),
@@ -85,8 +58,6 @@ const ActionsSchema = v.object({
   nextSituation: v.string(),
 });
 
-export type Action = v.InferInput<typeof ActionsSchema>;
-
 const ActionsSystemInstruction = `**あなたについて**
 
 ${CharacterPersonality.trim()}
@@ -95,13 +66,14 @@ ${CharacterPersonality.trim()}
 function timeMessage(time: dayjs.Dayjs) {
   switch (time.hour()) {
     case 6:
-      return 'おはようございます！';
     case 7:
+      return '朝です。太陽が登ってきました。';
     case 8:
       return '朝食の時間です。';
     case 9:
     case 10:
     case 11:
+      return 'おはようございます。';
     case 12:
       return '昼ご飯の時間です。';
     case 13:
@@ -153,7 +125,7 @@ ${state.stateHistory.map(({ time, location, situation }) => JSON.stringify({ tim
   valence: number;
   // 思考
   thinking: string;
-  // 行動
+  // 思考した結果の行動
   action: string;
   // 行動後の場所
   nextLocation: string;
@@ -180,58 +152,6 @@ export async function generateAction(state: State) {
   });
 
   return v.parse(ActionsSchema, res);
-}
-
-const DailyTweet = {
-  schema: v.object({
-    status: v.string(),
-    keyword: v.string(),
-    next: v.string(),
-  }),
-  systemInstruction: `以下のキャラクタとしてマイクロブログに投稿してください。
-
-${CharacterSetting.trim()}
-
-与えれたシチュエーションや設定を元にポストを行ってください。
-除外する単語は投稿内容に含めないでください。
-
-**出力フォーマット**
-"""
-{
-  // 単語
-  keyword: string;
-  // 投稿内容
-  status: string;
-  // 次は何をするか
-  next: string;
-}
-"""
-`,
-  prompt(day: dayjs.Dayjs, todo: string, recentTopics: string[]) {
-    return `**設定**
-
-背景: ${todo}
-投稿日時: ${day.format('YYYY/MM/DD HH:mm:ss')}
-除外する単語: ${JSON.stringify(recentTopics)}
-`;
-  },
-};
-
-export async function getDailyTweetMessage(
-  now: dayjs.Dayjs,
-  todo: string,
-  recentTopics: string[],
-) {
-  const res = await generate({
-    systemInstruction: DailyTweet.systemInstruction,
-    prompt: DailyTweet.prompt(now, todo, recentTopics),
-  });
-
-  const tweetMessage = v.parse(DailyTweet.schema, res);
-  // 改行をまとめる
-  tweetMessage.status = tweetMessage.status.replace(/\n+/g, '\n');
-  tweetMessage.next = tweetMessage.next.replace(/\n/g, '');
-  return tweetMessage;
 }
 
 type MessageHistory = {
@@ -403,68 +323,4 @@ export async function generateReplyApproach(message: string) {
   } catch (_e) {
     return { error: 'parse_failed' };
   }
-}
-
-const MonthlySchedule = {
-  schema: v.record(v.string(), v.string()),
-  prompt(month: number, endOfMonth: number) {
-    return `１日毎にゆったりとした充実した日常の標語を考えてください。
-モチーフは季節(${month}月)に沿ったものにしてください。
-
-**出力フォーマット**
-
-キーは日付に対応し、1日から${endOfMonth}日までです。
-"""
-{
-  "1": "{schedule}",
-  "2": "{schedule}",...,
-  "${endOfMonth}": "{schedule}"
-}
-"""
-`;
-  },
-};
-
-export async function generateMonthlySchedule(
-  month: number,
-  endOfMonth: number,
-) {
-  const res = await generate({
-    prompt: MonthlySchedule.prompt(month, endOfMonth),
-  });
-
-  return v.parse(MonthlySchedule.schema, res);
-}
-
-const HourlyTodo = {
-  schema: v.record(v.string(), v.string()),
-  prompt(slogan: string) {
-    return `１時間毎に行うゆったりと充実した休日の日常生活の予定を考えてください。
-予定は短い文章で表現してください。
-
-**設定**
-
-今日のスローガン: ${slogan}
-
-**出力フォーマット**
-
-"""
-{
-  "0": "{hourly_todo}",
-  "1": "{hourly_todo}",
-  ...,
-  "23": "{hourly_todo}"
-}
-"""
-
-`;
-  },
-};
-
-export async function generateHourlyTodo(slogan: string) {
-  const res = await generate({
-    prompt: HourlyTodo.prompt(slogan),
-  });
-
-  return v.parse(HourlyTodo.schema, res);
 }

@@ -28,20 +28,12 @@ export default async function readNotification(
   let sinceId = await findNotificationSinceId();
 
   const notifications: MastodonNotification[] = [];
-  for (;;) {
-    const minId =
-      notifications.length === 0
-        ? undefined
-        : notifications[notifications.length - 1].id;
-    const res = await getAllNotifications(token, {
-      limit: 80,
-      since_id: sinceId,
-      min_id: minId,
-    });
-    if (!res.length) break;
 
-    notifications.push(...res);
-  }
+  const res = await getAllNotifications(token, {
+    limit: 80,
+    since_id: sinceId,
+  });
+  if (res.length === 0) return;
 
   const processTargets = [...notifications].reverse();
   try {
