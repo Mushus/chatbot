@@ -3,11 +3,15 @@ import { findAppToken, saveApiToken } from '../dynamodb/token';
 import { createApp, createAppToken, createAuthorizationUrl } from '../mastodon';
 import { MastodonToken } from '../types';
 
+export type AuthorizeUrl = {
+  url: URL;
+};
+
 export async function authorizeStart(
   redirectUri: string,
-): Promise<{ url: URL } | { error: 'tokenAlreadyExists' }> {
+): Promise<AuthorizeUrl> {
   const token = await findAppToken();
-  if (token) return { error: 'tokenAlreadyExists' };
+  if (token) throw new TokenAlreadyExists();
 
   let app = await findApp();
   if (!app) {
@@ -34,7 +38,7 @@ export async function createToken(
   if (tokenInStorage) return tokenInStorage;
 
   const app = await findApp();
-  if (!app) throw new AppNotFoundError('App not found');
+  if (!app) throw new AppNotFoundError();
 
   const newToken = await createAppToken(app, code, redirectUri);
   await saveApiToken(newToken);
@@ -42,4 +46,14 @@ export async function createToken(
   return newToken;
 }
 
-export class AppNotFoundError extends Error {}
+export class AppNotFoundError extends Error {
+  constructor() {
+    super('App not found');
+  }
+}
+
+export class TokenAlreadyExists extends Error {
+  constructor() {
+    super('Token already exists');
+  }
+}

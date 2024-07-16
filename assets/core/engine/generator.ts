@@ -36,7 +36,7 @@ const CharacterSetting = `名前: 餅月ルナ
 文章の特徴: 突然叫びだす / 敬語を間違える / たまにタメ口が出てしまう
 `;
 
-const CharacterPersonality = `性格: おっとり癒し系 / 天然 / 興味津々 / サブカル好き / 一人が好き`;
+const CharacterPersonality = `性格: おっとり癒し系 / 興味津々 / サブカル好き / 一人が好き`;
 
 export function generateFollowGreetingMessage() {
   const messageIndex = Math.floor(Math.random() * followBackGreetings.length);
@@ -107,14 +107,12 @@ function timeMessage(time: dayjs.Dayjs) {
 
 function actionPrompt(state: State) {
   const time = state.time.tz(TzTokyo);
-  return `${timeMessage(time)}
+  const lastIndex = state.stateHistory.length - 1;
+  return `${state.stateHistory.map(({ location, situation }, i) => `${i === lastIndex ? 'そして、' : ''}「${location}」で「${situation}」をしました。`).join('\n')}
+
+${timeMessage(time)}
 現在時刻は「${time.format(MinutesTimeFormat)}」です。
-何をしますか？
-
-**過去の行動履歴**
-
-上から新しい順に並んでいます。
-${state.stateHistory.map(({ time, location, situation }) => JSON.stringify({ time: time.tz(TzTokyo).format(MinutesTimeFormat), location, situation })).join('\n')}
+次は何をしますか？
 
 **出力フォーマット**
 """

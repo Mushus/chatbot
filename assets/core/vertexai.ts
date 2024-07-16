@@ -5,7 +5,7 @@ import {
 } from '@google-cloud/vertexai/build/src/types/content';
 import { VertexAI } from '@google-cloud/vertexai/build/src/vertex_ai';
 import { instance } from 'gaxios';
-import { GoogleCloudLocation, GoogleCloudProject } from '../env/value';
+import { GoogleCloudLocation, GoogleCloudProject } from './env/value';
 
 const vertexAI = new VertexAI({
   project: GoogleCloudProject,

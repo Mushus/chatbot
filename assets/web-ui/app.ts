@@ -4,7 +4,9 @@ import * as v from 'valibot';
 import {
   AppNotFoundError,
   authorizeStart,
+  AuthorizeUrl,
   createToken,
+  TokenAlreadyExists,
 } from '../core/engine/auth';
 import { AppName } from '../core/env/value';
 
@@ -39,8 +41,15 @@ app.get(
 app.get('/auth', async (ctx) => {
   const redirectUri = getRedirectUri(ctx);
 
-  const authorization = await authorizeStart(redirectUri);
-  if ('error' in authorization) return ctx.redirect('/');
+  let authorization: AuthorizeUrl;
+  try {
+    authorization = await authorizeStart(redirectUri);
+  } catch (e) {
+    if (e instanceof TokenAlreadyExists) {
+      return ctx.redirect('/');
+    }
+    throw e;
+  }
 
   return ctx.redirect(authorization.url.toString());
 });

@@ -1,12 +1,12 @@
 import { ofetch } from 'ofetch';
-import { AppName, MastodonDomain } from '../env/value';
+import { AppName, MastodonDomain } from './env/value';
 import {
   MastodonApp,
   MastodonCredentials,
   MastodonNotification,
   MastodonStatus,
   MastodonToken,
-} from '../types';
+} from './types';
 
 const AppScope = 'read write follow';
 const BaseUrl = `https://${MastodonDomain}`;
