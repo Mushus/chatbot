@@ -6,7 +6,13 @@ export default [
     { files: ['**/*.{js,mjs,cjs,ts}'] },
     { languageOptions: { globals: globals.browser } },
     { ignores: ['**/node_modules/', '.git/', 'cdk.out/'] },
-    { languageOptions: { parserOptions: { project: './tsconfig.json' } } },
+    {
+        languageOptions: {
+            parserOptions: {
+                project: ['./tsconfig.json', './assets/tsconfig.json'],
+            },
+        },
+    },
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     pluginJs.configs.recommended,
     ...tsEslint.configs.strictTypeChecked,
