@@ -106,7 +106,10 @@ async function responseReply(
     })
     .reverse();
 
-  const { status } = await generateReplyMessage(cred.username, messages);
+  const res = await generateReplyMessage(cred.username, messages);
+  if (!res) return;
+
+  const { status } = res;
 
   const replyTarget = mention.status;
   const updatedStatus = `@${replyTarget.account.acct} ${status}`;

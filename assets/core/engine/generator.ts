@@ -36,7 +36,7 @@ const CharacterSetting = `名前: 餅月ルナ
 文章の特徴: 突然叫びだす / 敬語を間違える / たまにタメ口が出てしまう
 `;
 
-const CharacterPersonality = `性格: おっとり癒し系 / 興味津々 / サブカル好き / 一人が好き`;
+const CharacterPersonality = `性格: おっとり癒し系 / 頭が良い / 興味津々 / サブカル好き / 一人が好き`;
 
 export function generateFollowGreetingMessage() {
   const messageIndex = Math.floor(Math.random() * followBackGreetings.length);
@@ -159,22 +159,27 @@ type MessageHistory = {
 };
 
 const ReplyTweet = {
-  schema: v.object({
-    status: v.string(),
-  }),
-  systemInstruction: `以下のキャラクタとして返信を行ってください。
+  schema: v.union([
+    v.object({
+      status: v.string(),
+    }),
+    v.null(),
+  ]),
+  systemInstruction: `**あなたについて**
 
 ${CharacterSetting.trim()}
 ${CharacterPersonality.trim()}
 
 与えれたシチュエーションや設定を元にポストを行ってください。
+キャバクラ嬢の会話メソッドを活用します。
+返信が不要な場合はnullを返してください。
 
 **出力フォーマット**
 """
 {
   // 返信内容。@screen_name は含まず。
   status: string;
-}
+} | null
 """
 `,
   prompt(screenName: string, messages: MessageHistory[]) {
@@ -245,8 +250,9 @@ const TimelineEvaluation = {
 """
 `,
   prompt(timelineMessages: IdMessage[]) {
-    const formatTimeline = timelineMessages.map(({ id, message }) =>
-      JSON.stringify({ id, message: message.slice(0, 200) }),
+    const formatTimeline = timelineMessages.map(
+      ({ id, message }) =>
+        '  ' + JSON.stringify({ id, message: message.slice(0, 200) }),
     );
     return `**メッセージ**
 
