@@ -25,33 +25,48 @@ export default async function readNotification(
   token: MastodonToken,
   cred: MastodonCredentials,
 ) {
+  await processNotification(token, async (notification) => {
+    switch (notification.type) {
+      case 'follow': {
+        await follow(token, notification.account.id);
+        await postGreetingStatus(token, notification.account);
+        break;
+      }
+      case 'mention': {
+        await responseReply(token, cred, notification);
+        break;
+      }
+    }
+    console.log(notification);
+  });
+}
+
+async function processNotification(
+  token: MastodonToken,
+  process: (notification: MastodonNotification) => Promise<void>,
+) {
   let sinceId = await findNotificationSinceId();
+  if (!sinceId) {
+    // １件だけ取得して保存して次に回す
+    const res = await getAllNotifications(token, {
+      limit: 1,
+    });
+    const sinceId = res[0]?.id;
+    if (sinceId) await saveNotificationSinceId(sinceId);
+    return;
+  }
 
-  const notifications: MastodonNotification[] = [];
-
-  const res = await getAllNotifications(token, {
+  const notifications = await getAllNotifications(token, {
     limit: 80,
     since_id: sinceId,
   });
-  if (res.length === 0) return;
+  if (notifications.length === 0) return;
 
   const processTargets = [...notifications].reverse();
   try {
     for (const notification of processTargets) {
       sinceId = notification.id;
-
-      switch (notification.type) {
-        case 'follow': {
-          await follow(token, notification.account.id);
-          await postGreetingStatus(token, notification.account);
-          break;
-        }
-        case 'mention': {
-          await responseReply(token, cred, notification);
-          break;
-        }
-      }
-      console.log(notification);
+      await process(notification);
     }
   } finally {
     if (sinceId) await saveNotificationSinceId(sinceId);
@@ -91,9 +106,7 @@ async function responseReply(
     })
     .reverse();
 
-  const reply = await generateReplyMessage(cred.username, messages);
-  if ('error' in reply) return;
-  const { status } = reply;
+  const { status } = await generateReplyMessage(cred.username, messages);
 
   const replyTarget = mention.status;
   const updatedStatus = `@${replyTarget.account.acct} ${status}`;
