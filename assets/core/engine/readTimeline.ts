@@ -27,9 +27,10 @@ export default async function readTimeline(
       ...status,
       text: status.text ?? striptags(status.content),
     }))
-    .filter((status) => status.account.id !== cred.id)
-    .filter((status) => status.in_reply_to_id === null)
-    .filter((status) => !status.text.startsWith('@'));
+    .filter((status) => status.reblog === null) // isReblog
+    .filter((status) => status.account.id !== cred.id) // myself
+    .filter((status) => status.in_reply_to_id === null) // isNotReply
+    .filter((status) => !status.text.startsWith('@')); // isNotMention
   const evaluation = await evaluateTimeline(readTargetStatus);
   if ('error' in evaluation) {
     return;

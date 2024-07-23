@@ -37,6 +37,7 @@ export type MastodonStatus = {
   content: string;
   mentions: MastodonMention[];
   text: string | null;
+  reblog: MastodonStatus | null;
 };
 
 export type MastodonMention = {

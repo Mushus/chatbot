@@ -70,19 +70,6 @@ export async function createAppToken(
   return res;
 }
 
-export async function updateStatus(
-  token: MastodonToken,
-  param: { status: string; in_reply_to_id?: string },
-) {
-  const res = await fedClient<MastodonStatus>('/api/v1/statuses', {
-    method: 'POST',
-    headers: authHeader(token.access_token),
-    body: { ...param, visibility: 'public' },
-  });
-
-  return res;
-}
-
 export async function getAllNotifications(
   token: MastodonToken,
   param: {
@@ -109,17 +96,24 @@ export async function follow(token: MastodonToken, accountId: string) {
   });
 }
 
-export async function viewStatus(token: MastodonToken, id: string) {
-  const res = await fedClient<MastodonStatus>(`/api/v1/statuses/${id}`, {
-    headers: authHeader(token.access_token),
-  });
+export async function verifyCredentials(token: MastodonToken) {
+  const res = await fedClient<MastodonCredentials>(
+    '/api/v1/accounts/verify_credentials',
+    {
+      headers: authHeader(token.access_token),
+    },
+  );
 
   return res;
 }
 
-export async function verifyCredentials(token: MastodonToken) {
-  const res = await fedClient<MastodonCredentials>(
-    '/api/v1/accounts/verify_credentials',
+/**
+ * https://docs.joinmastodon.org/methods/accounts/#statuses
+ * Statuses posted to the given account.
+ */
+export async function getAccountsStatuses(token: MastodonToken, id: string) {
+  const res = await fedClient<MastodonStatus[]>(
+    `/api/v1/accounts/${id}/statuses`,
     {
       headers: authHeader(token.access_token),
     },
@@ -142,6 +136,27 @@ export async function viewHomeTimeline(
   const res = await fedClient<MastodonStatus[]>('/api/v1/timelines/home', {
     headers: authHeader(token.access_token),
     query: param,
+  });
+
+  return res;
+}
+
+export async function updateStatus(
+  token: MastodonToken,
+  param: { status: string; in_reply_to_id?: string },
+) {
+  const res = await fedClient<MastodonStatus>('/api/v1/statuses', {
+    method: 'POST',
+    headers: authHeader(token.access_token),
+    body: { ...param, visibility: 'public' },
+  });
+
+  return res;
+}
+
+export async function viewStatus(token: MastodonToken, id: string) {
+  const res = await fedClient<MastodonStatus>(`/api/v1/statuses/${id}`, {
+    headers: authHeader(token.access_token),
   });
 
   return res;
