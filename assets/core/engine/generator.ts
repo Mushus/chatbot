@@ -1,8 +1,6 @@
-import dayjs from 'dayjs';
 import * as v from 'valibot';
 import { MastodonStatus } from '../types';
 import generate from '../vertexai';
-import { MinutesTimeFormat, TzTokyo } from '../const';
 
 const followBackGreetings = [
   'わぁ、フォローありがとうございます！嬉しいです😊💖',
@@ -41,115 +39,6 @@ const CharacterPersonality = `性格: おっとり癒し系 / 頭が良い / 興
 export function generateFollowGreetingMessage() {
   const messageIndex = Math.floor(Math.random() * followBackGreetings.length);
   return followBackGreetings[messageIndex];
-}
-
-const ActionsSchema = v.object({
-  /** 覚醒度 -1 ~ +1*/
-  arousal: v.number(),
-  /** 感情価 -1 ~ +1 */
-  valence: v.number(),
-  /** 思考 */
-  thinking: v.string(),
-  /** 行動 */
-  action: v.string(),
-  /** 行動後の場所 */
-  nextLocation: v.string(),
-  /** 行動後のシチュエーション */
-  nextSituation: v.string(),
-});
-
-const ActionsSystemInstruction = `**あなたについて**
-
-${CharacterPersonality.trim()}
-`;
-
-function timeMessage(time: dayjs.Dayjs) {
-  switch (time.hour()) {
-    case 6:
-    case 7:
-      return '朝です。太陽が登ってきました。';
-    case 8:
-      return '朝食の時間です。';
-    case 9:
-    case 10:
-    case 11:
-      return 'おはようございます。';
-    case 12:
-      return '昼ご飯の時間です。';
-    case 13:
-    case 14:
-      return 'こんにちは。';
-    case 15:
-      return 'おやつの時間です。';
-    case 16:
-    case 17:
-      return 'こんにちは。';
-    case 18:
-      return '日が落ちて暗くなってきました。';
-    case 19:
-      return '夕飯の時間です。';
-    case 20:
-    case 21:
-    case 22:
-    case 23:
-      return '就寝時間です。';
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-      return '就寝時間です。';
-    default:
-      return '';
-  }
-}
-
-function actionPrompt(state: State) {
-  const time = state.time.tz(TzTokyo);
-  const lastIndex = state.stateHistory.length - 1;
-  return `${state.stateHistory.map(({ location, situation }, i) => `${i === lastIndex ? 'そして、' : ''}「${location}」で「${situation}」をしました。`).join('\n')}
-
-${timeMessage(time)}
-現在時刻は「${time.format(MinutesTimeFormat)}」です。
-次は何をしますか？
-
-**出力フォーマット**
-"""
-{
-  // 覚醒度 -1 ~ +1
-  arousal: number;
-  // 感情価 -1 ~ +1
-  valence: number;
-  // 思考
-  thinking: string;
-  // 思考した結果の行動
-  action: string;
-  // 行動後の場所
-  nextLocation: string;
-  // 行動後のシチュエーション
-  nextSituation: string;
-}
-"""
-`;
-}
-
-type State = {
-  time: dayjs.Dayjs;
-  stateHistory: {
-    time: dayjs.Dayjs;
-    location: string;
-    situation: string;
-  }[];
-};
-
-export async function generateAction(state: State) {
-  const res = await generate({
-    systemInstruction: ActionsSystemInstruction,
-    prompt: actionPrompt(state),
-  });
-
-  return v.parse(ActionsSchema, res);
 }
 
 type MessageHistory = {
