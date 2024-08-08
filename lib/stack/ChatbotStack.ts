@@ -18,6 +18,7 @@ import {
   EnvTableSettings,
 } from '../../assets/core/env/key';
 import Lambda from '../construct/Lambda';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,7 +30,20 @@ export class ChatbotStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    // aws secretsmanager create-secret --name ChatbotOpenAIKey --secret-string [secret]
+    const openAIKey = Secret.fromSecretAttributes(this, 'ChatbotOpenAIKey', {
+      secretCompleteArn:
+        'arn:aws:secretsmanager:ap-northeast-1:863657440723:secret:ChatbotOpenAIKey-ZDpYdm',
+    });
+    // arn:aws:secretsmanager:ap-northeast-1:863657440723:secret:ChatbotOpenAIKey-ZDpYdm
+
     const chatbotTbl = new TableV2(this, 'ChatbotData', {
+      partitionKey: { name: 'PK', type: AttributeType.STRING },
+      sortKey: { name: 'SK', type: AttributeType.STRING },
+      timeToLiveAttribute: 'expireAt',
+    });
+
+    new TableV2(this, 'TestChatbotData', {
       partitionKey: { name: 'PK', type: AttributeType.STRING },
       sortKey: { name: 'SK', type: AttributeType.STRING },
       timeToLiveAttribute: 'expireAt',
@@ -54,6 +68,7 @@ export class ChatbotStack extends Stack {
       ),
     );
     chatbotTbl.grantReadWriteData(role);
+    openAIKey.grantRead(role);
 
     const webUI = new Lambda(this, 'WebUI', {
       logName: 'web-ui',
